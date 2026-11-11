@@ -66,6 +66,7 @@ import datacreator from './data/datacreator'
 import locales from './data/static/locales.json'
 
 import { login } from './routes/login'
+import { getSecurityMonitoring } from './routes/securityMonitoring'
 import * as verify from './routes/verify'
 import * as address from './routes/address'
 import * as metrics from './routes/metrics'
@@ -632,6 +633,14 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   }
 
   /* Custom Restful API */
+
+  // Member 4: Admin-only security monitoring API
+  app.get(
+    '/api/security-monitoring',
+    security.isAuthorized(),
+    security.isAdmin(),
+    utils.asyncHandler(getSecurityMonitoring)
+  )
   app.post('/rest/user/login', login())
   app.get('/rest/user/change-password', utils.asyncHandler(changePassword()))
   app.post('/rest/user/reset-password', utils.asyncHandler(resetPassword()))

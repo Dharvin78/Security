@@ -1,0 +1,185 @@
+
+.security-dashboard {
+  padding: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: #f1f5f9;
+  min-height: 100vh;
+  background: #111827;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #ffffff;
+  }
+
+  p {
+    color: #9ca3af;
+    margin: 0;
+  }
+}
+
+.refresh-btn {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1d4ed8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 25px;
+  border-left: 5px solid #64748b;
+}
+
+.failed-logins {
+  border-left-color: #ef4444;
+}
+
+.unauthorized-access {
+  border-left-color: #f59e0b;
+}
+
+.total-events {
+  border-left-color: #3b82f6;
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.stat-value {
+  font-size: 40px;
+  font-weight: 700;
+  margin: 15px 0;
+  color: #ffffff;
+}
+
+.stat-description {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.events-section {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 25px;
+
+  h2 {
+    font-size: 20px;
+    margin: 0 0 20px;
+    color: #ffffff;
+  }
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+
+  th {
+    padding: 14px;
+    background: #374151;
+    color: #e5e7eb;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 14px;
+    border-bottom: 1px solid #374151;
+    color: #d1d5db;
+    font-size: 13px;
+  }
+
+  tbody tr:hover {
+    background: #273449;
+  }
+}
+
+.event-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #334155;
+  color: #ffffff;
+
+  &.FAILED_LOGIN {
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  &.UNAUTHORIZED_ACCESS {
+    background: #78350f;
+    color: #fde68a;
+  }
+}
+
+.loading-message,
+.error-message,
+.empty-message {
+  padding: 20px;
+  text-align: center;
+}
+
+.error-message {
+  color: #fca5a5;
+}
+
+@media (max-width: 768px) {
+  .security-dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .statistics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-value {
+    font-size: 32px;
+  }
+}

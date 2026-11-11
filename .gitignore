@@ -71,3 +71,6 @@ config/*.yml
 # Misc
 .playwright-mcp/
 cypress/screenshots/
+
+# Security monitoring logs - Member 4
+/security-logs/

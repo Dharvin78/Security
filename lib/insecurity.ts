@@ -13,6 +13,7 @@ import jws from 'jws'
 import sanitizeHtmlLib from 'sanitize-html'
 import sanitizeFilenameLib from 'sanitize-filename'
 import * as utils from './utils'
+import securityLogger from './securityLogger'
 
 // @ts-expect-error FIXME no typescript definitions for z85 :(
 import * as z85 from 'z85'
@@ -151,16 +152,60 @@ export const deluxeToken = (email: string) => {
   return hmac.update(email + roles.deluxe).digest('hex')
 }
 
+
 export const isAccounting = () => {
   return (req: Request, res: Response, next: NextFunction) => {
     const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))
+
     if (decodedToken?.data?.role === roles.accounting) {
       next()
     } else {
+      securityLogger.warn('Unauthorized access attempt', {
+        eventType: 'UNAUTHORIZED_ACCESS',
+        ipAddress: req.ip,
+        method: req.method,
+        path: req.path,
+        requiredRole: roles.accounting,
+        statusCode: 403
+      })
+
       res.status(403).json({ error: 'Malicious activity detected' })
     }
   }
 }
+
+
+export const isAdmin = () => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const token = utils.jwtFrom(req)
+
+    if (!token) {
+      return res.status(401).json({
+        error: 'Authentication required'
+      })
+    }
+
+    const decodedToken = verify(token) && decode(token)
+
+    if (decodedToken?.data?.role === roles.admin) {
+      return next()
+    }
+
+    securityLogger.warn('Unauthorized admin access attempt', {
+      eventType: 'UNAUTHORIZED_ACCESS',
+      ipAddress: req.ip,
+      method: req.method,
+      path: req.path,
+      requiredRole: roles.admin,
+      statusCode: 403
+    })
+
+    return res.status(403).json({
+      error: 'Administrator access required'
+    })
+  }
+}
+
 
 export const isDeluxe = (req: Request) => {
   const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))

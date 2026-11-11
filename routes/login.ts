@@ -5,6 +5,7 @@
 import { type Request, type Response, type NextFunction } from 'express'
 import config from 'config'
 
+import securityLogger from '../lib/securityLogger'
 import * as challengeUtils from '../lib/challengeUtils'
 import { challenges, users } from '../data/datacache'
 import { BasketModel } from '../models/basket'
@@ -47,6 +48,16 @@ export function login () {
         } else if (user.data?.id) {
           afterLogin(user.data, res, next)
         } else {
+          securityLogger.warn('Failed login attempt', {
+            eventType: 'FAILED_LOGIN',
+            timestamp: new Date().toISOString(),
+            ipAddress: req.ip,
+            email: typeof req.body?.email === 'string'
+              ? req.body.email.slice(0, 254)
+              : 'unknown',
+            statusCode: 401
+          })
+
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {

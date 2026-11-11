@@ -14,6 +14,7 @@ import { ForgotPasswordComponent } from './forgot-password/forgot-password.compo
 import { SearchResultComponent } from './search-result/search-result.component'
 import { LoginComponent } from './login/login.component'
 import { AdministrationComponent } from './administration/administration.component'
+import { SecurityMonitoringComponent } from './security-monitoring/security-monitoring.component'
 import { ChangePasswordComponent } from './change-password/change-password.component'
 import { ComplaintComponent } from './complaint/complaint.component'
 import { RouterModule, type Routes, type UrlMatchResult, type UrlSegment } from '@angular/router'
@@ -81,6 +82,13 @@ const routes: Routes = [
     component: AdministrationComponent, // vuln-code-snippet neutral-line adminSectionChallenge
     canActivate: [AdminGuard] // vuln-code-snippet neutral-line adminSectionChallenge
   }, // vuln-code-snippet neutral-line adminSectionChallenge
+
+  {
+    path: 'security-monitoring',
+    component: SecurityMonitoringComponent,
+    canActivate: [AdminGuard]
+  },
+
   {
     path: 'accounting',
     component: AccountingComponent,
