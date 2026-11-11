@@ -11,12 +11,17 @@ interface SecurityEvent {
   method?: string
   path?: string
   requiredRole?: string
+  alertType?: string
+  severity?: string
+  failedAttempts?: number
+  timeWindowMinutes?: number
 }
 
 interface SecurityMonitoringResponse {
   statistics: {
     failedLogins: number
     unauthorizedAccess: number
+    suspiciousActivity: number
     totalEvents: number
   }
   recentEvents: SecurityEvent[]
@@ -33,6 +38,7 @@ export class SecurityMonitoringComponent implements OnInit {
   statistics = {
     failedLogins: 0,
     unauthorizedAccess: 0,
+    suspiciousActivity: 0,
     totalEvents: 0
   }
 

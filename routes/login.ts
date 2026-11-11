@@ -6,6 +6,7 @@ import { type Request, type Response, type NextFunction } from 'express'
 import config from 'config'
 
 import securityLogger from '../lib/securityLogger'
+import { detectSuspiciousLogin } from '../lib/suspiciousActivity'
 import * as challengeUtils from '../lib/challengeUtils'
 import { challenges, users } from '../data/datacache'
 import { BasketModel } from '../models/basket'
@@ -58,6 +59,9 @@ export function login () {
             statusCode: 401
           })
 
+          // Detect repeated failed login attempts from the same IP.
+          detectSuspiciousLogin(req.ip ?? 'unknown')
+          
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {
