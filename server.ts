@@ -352,7 +352,15 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
         req.body = {}
       }
       if (req.body !== Object(req.body)) { // Expensive workaround for 500 errors during Frisby test run (see #640)
-        req.body = JSON.parse(req.body)
+        try {
+          req.body = JSON.parse(req.body)
+        } catch {
+          const error = Object.assign(new Error('Invalid JSON'), {
+            status: 400
+          })
+          next(error)
+          return
+        }
       }
     }
     next()
@@ -449,6 +457,7 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     }
     next()
   })
+
   app.post('/api/Users', verify.registerAdminChallenge())
   app.post('/api/Users', verify.passwordRepeatChallenge()) // vuln-code-snippet hide-end
   app.post('/api/Users', verify.emptyUserRegistration())
@@ -719,7 +728,37 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
 
   /* Error Handling */
   app.use(verify.errorHandlingChallenge())
-  app.use(errorhandler())
+  app.use((
+    error: Error & { status?: number, statusCode?: number },
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    if (res.headersSent) {
+      next(error)
+      return
+    }
+
+    const candidate = error.status ?? error.statusCode
+    const status = typeof candidate === 'number' &&
+      Number.isInteger(candidate) &&
+      candidate >= 400 &&
+      candidate <= 599
+      ? candidate
+      : 500
+
+    console.error('Request failed', {
+      method: req.method,
+      status
+    })
+
+    res.status(status).json({
+      status: 'error',
+      message: status >= 500
+        ? 'An unexpected error occurred. Please try again later.'
+        : 'The request could not be processed. Check your input and permissions.'
+    })
+  })
 }
 
 // Function called first to ensure that all the i18n files are reloaded successfully before other linked operations.
