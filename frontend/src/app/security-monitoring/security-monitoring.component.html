@@ -1,0 +1,118 @@
+
+<div class="security-dashboard">
+
+  <div class="dashboard-header">
+    <div>
+      <h1>Security Monitoring Dashboard</h1>
+      <p>Monitor authentication failures, unauthorized access and security events.</p>
+    </div>
+
+    <button type="button"
+            class="refresh-btn"
+            (click)="loadSecurityEvents()"
+            [disabled]="loading">
+      Refresh
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-message">
+    Loading security monitoring data...
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!loading && !errorMessage">
+
+    <div class="statistics-grid">
+
+      <div class="stat-card failed-logins">
+        <div class="stat-label">Failed Login Attempts</div>
+        <div class="stat-value">{{ statistics.failedLogins }}</div>
+        <div class="stat-description">Unsuccessful authentication attempts</div>
+      </div>
+
+      <div class="stat-card unauthorized-access">
+        <div class="stat-label">Unauthorized Access</div>
+        <div class="stat-value">{{ statistics.unauthorizedAccess }}</div>
+        <div class="stat-description">Restricted resource access attempts</div>
+      </div>
+
+      <div class="stat-card suspicious-activity">
+        <div class="stat-label">Suspicious Activity Alerts</div>
+        <div class="stat-value">{{ statistics.suspiciousActivity }}</div>
+        <div class="stat-description">Detected repeated failed login attempts</div>
+      </div>
+
+      <div class="stat-card total-events">
+        <div class="stat-label">Total Security Events</div>
+        <div class="stat-value">{{ statistics.totalEvents }}</div>
+        <div class="stat-description">Recorded security events</div>
+      </div>
+
+    </div>
+
+    <section class="events-section">
+      <h2>Recent Security Events</h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Event Type</th>
+              <th>Severity</th>
+              <th>Alert Details</th>
+              <th>Description</th>
+              <th>HTTP Status</th>
+              <th>Endpoint</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let event of recentEvents">
+              <td>{{ event.timestamp | date:'medium' }}</td>
+              <td>
+                <span class="event-badge"
+                      [ngClass]="event.eventType">
+                  {{ event.eventType }}
+                </span>
+              </td>
+              <td>
+                <span [class.high-severity]="event.severity === 'HIGH'">
+                  {{ event.severity || event.level }}
+                </span>
+              </td>
+
+              <td>
+                <ng-container *ngIf="event.eventType === 'SUSPICIOUS_ACTIVITY'; else noAlert">
+                  <strong>{{ event.alertType }}</strong>
+                  <div>
+                    {{ event.failedAttempts }} failed attempts
+                    within {{ event.timeWindowMinutes }} minutes
+                  </div>
+                </ng-container>
+
+                <ng-template #noAlert>
+                  N/A
+                </ng-template>
+              </td>
+              <td>{{ event.message }}</td>
+              <td>{{ event.statusCode }}</td>
+              <td>{{ event.path || 'N/A' }}</td>
+            </tr>
+
+            <tr *ngIf="recentEvents.length === 0">
+              <td colspan="7" class="empty-message">
+                No security events recorded.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </ng-container>
+
+</div>
