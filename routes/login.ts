@@ -70,8 +70,7 @@ export function login () {
           })
         } else if (user.data?.id) {
           afterLogin(user.data, res, next)
-        } 
-        else {
+        } else {
           securityLogger.warn('Failed login attempt', {
             eventType: 'FAILED_LOGIN',
             timestamp: new Date().toISOString(),
@@ -84,7 +83,7 @@ export function login () {
 
           // Detect repeated failed login attempts from the same IP.
           detectSuspiciousLogin(req.ip ?? 'unknown')
-          
+
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {

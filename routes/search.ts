@@ -20,22 +20,22 @@ export function searchProducts () {
   return (req: Request, res: Response, next: NextFunction) => {
     const criteria = req.query.q === 'undefined' ? '' : req.query.q ?? ''
 
-if (typeof criteria !== 'string' || criteria.length > 200) {
-  res.status(400).json({
-    status: 'error',
-    message: 'Search must be text containing no more than 200 characters.'
-  })
-  return
-}
-
-models.sequelize.query(
-  'SELECT * FROM Products WHERE ((name LIKE $search OR description LIKE $search) AND deletedAt IS NULL) ORDER BY name',
-  {
-    bind: {
-      search: `%${criteria}%`
+    if (typeof criteria !== 'string' || criteria.length > 200) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Search must be text containing no more than 200 characters.'
+      })
+      return
     }
-  }
-) 
+
+    models.sequelize.query(
+      'SELECT * FROM Products WHERE ((name LIKE $search OR description LIKE $search) AND deletedAt IS NULL) ORDER BY name',
+      {
+        bind: {
+          search: `%${criteria}%`
+        }
+      }
+    )
       .then(([products]: any) => {
         const dataString = JSON.stringify(products)
         if (challengeUtils.notSolved(challenges.unionSqlInjectionChallenge)) { // vuln-code-snippet hide-start

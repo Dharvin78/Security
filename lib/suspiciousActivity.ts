@@ -1,4 +1,3 @@
-
 import securityLogger from './securityLogger'
 
 const FAILED_LOGIN_THRESHOLD = 5

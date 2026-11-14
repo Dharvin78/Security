@@ -152,7 +152,6 @@ export const deluxeToken = (email: string) => {
   return hmac.update(email + roles.deluxe).digest('hex')
 }
 
-
 export const isAccounting = () => {
   return (req: Request, res: Response, next: NextFunction) => {
     const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))
@@ -173,7 +172,6 @@ export const isAccounting = () => {
     }
   }
 }
-
 
 export const isAdmin = () => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -205,7 +203,6 @@ export const isAdmin = () => {
     })
   }
 }
-
 
 export const isDeluxe = (req: Request) => {
   const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))

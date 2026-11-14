@@ -1,4 +1,3 @@
-
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { type Request, type Response, type NextFunction } from 'express'
@@ -38,16 +37,16 @@ export const getSecurityMonitoring = async (
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return res.json({
-            statistics: {
+          statistics: {
             failedLogins: 0,
             unauthorizedAccess: 0,
             suspiciousActivity: 0,
             totalEvents: 0
-            },
-            recentEvents: []
+          },
+          recentEvents: []
         })
-        }
-        throw error
+      }
+      throw error
     }
     const events: SecurityEvent[] = []
 
@@ -78,24 +77,23 @@ export const getSecurityMonitoring = async (
     ).length
 
     const suspiciousActivity = events.filter(
-        event => event.eventType === 'SUSPICIOUS_ACTIVITY'
+      event => event.eventType === 'SUSPICIOUS_ACTIVITY'
     ).length
 
-    
     const recentEvents = events.slice(-50).reverse().map(event => ({
-        timestamp: event.timestamp,
-        eventType: event.eventType,
-        level: event.level,
-        message: event.message,
-        statusCode: event.statusCode,
-        method: event.method,
-        path: event.path,
-        requiredRole: event.requiredRole,
-        alertType: event.alertType,
-        severity: event.severity,
-        failedAttempts: event.failedAttempts,
-        timeWindowMinutes: event.timeWindowMinutes
-        }))
+      timestamp: event.timestamp,
+      eventType: event.eventType,
+      level: event.level,
+      message: event.message,
+      statusCode: event.statusCode,
+      method: event.method,
+      path: event.path,
+      requiredRole: event.requiredRole,
+      alertType: event.alertType,
+      severity: event.severity,
+      failedAttempts: event.failedAttempts,
+      timeWindowMinutes: event.timeWindowMinutes
+    }))
 
     return res.json({
       statistics: {
