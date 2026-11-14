@@ -634,7 +634,7 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
 
   /* Custom Restful API */
 
-  // Member 4: Admin-only security monitoring API
+  // Admin-only security monitoring API
   app.get(
     '/api/security-monitoring',
     security.isAuthorized(),

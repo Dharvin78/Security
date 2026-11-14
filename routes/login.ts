@@ -48,7 +48,8 @@ export function login () {
           })
         } else if (user.data?.id) {
           afterLogin(user.data, res, next)
-        } else {
+        } 
+        else {
           securityLogger.warn('Failed login attempt', {
             eventType: 'FAILED_LOGIN',
             timestamp: new Date().toISOString(),
