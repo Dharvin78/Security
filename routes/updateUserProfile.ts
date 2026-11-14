@@ -12,8 +12,32 @@ import { UserModel } from '../models/user'
 import * as utils from '../lib/utils'
 import config from 'config'
 
+const trustedOrigin = new URL(
+  process.env.APP_ORIGIN ?? 'http://localhost:3000'
+).origin
+
 export function updateUserProfile () {
   return async (req: Request, res: Response, next: NextFunction) => {
+    let sourceOrigin: string | undefined
+
+    if (req.headers.origin !== undefined) {
+      sourceOrigin = req.headers.origin
+    } else if (req.headers.referer !== undefined) {
+      try {
+        sourceOrigin = new URL(req.headers.referer).origin
+      } catch {
+        sourceOrigin = undefined
+      }
+    }
+
+    if (sourceOrigin !== trustedOrigin) {
+      res.status(403).json({
+        status: 'error',
+        message: 'Request origin is not allowed.'
+      })
+      return
+    }
+
     const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
 
     if (!loggedInUser) {
@@ -23,6 +47,7 @@ export function updateUserProfile () {
 
     try {
       const user = await UserModel.findByPk(loggedInUser.data.id)
+
       if (!user) {
         next(new Error('User not found'))
         return
@@ -38,6 +63,7 @@ export function updateUserProfile () {
       const savedUser = await user.update({ username: req.body.username })
       const userWithStatus = utils.queryResultToJson(savedUser)
       const updatedToken = security.authorize(userWithStatus)
+
       security.authenticatedUsers.put(updatedToken, userWithStatus)
       res.cookie('token', updatedToken)
       res.location(process.env.BASE_PATH + '/profile')
