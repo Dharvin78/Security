@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core'
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { HttpClient, HttpHeaders } from '@angular/common/http'
 
@@ -46,7 +46,8 @@ export class SecurityMonitoringComponent implements OnInit {
   loading = true
   errorMessage = ''
 
-  constructor (private readonly http: HttpClient, private readonly cdr: ChangeDetectorRef) {}
+  private readonly http = inject(HttpClient)
+  private readonly cdr = inject(ChangeDetectorRef)
 
   ngOnInit (): void {
     this.loadSecurityEvents()
