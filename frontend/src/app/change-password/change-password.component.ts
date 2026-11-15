@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
@@ -12,7 +13,6 @@ import { faSave } from '@fortawesome/free-solid-svg-icons'
 import { faEdit } from '@fortawesome/free-regular-svg-icons'
 import { TranslateService, TranslateModule } from '@ngx-translate/core'
 import { MatButtonModule } from '@angular/material/button'
-
 import { MatInputModule } from '@angular/material/input'
 import {
   MatFormFieldModule,
@@ -59,12 +59,15 @@ export class ChangePasswordComponent {
 
   public readonly changePasswordForm = form(this.changePasswordModel, (s) => {
     required(s.currentPassword)
+
     required(s.newPassword)
-    minLength(s.newPassword, 5)
-    maxLength(s.newPassword, 40)
+    minLength(s.newPassword, 12)
+    maxLength(s.newPassword, 128)
+
     required(s.repeatNewPassword)
-    minLength(s.repeatNewPassword, 5)
-    maxLength(s.repeatNewPassword, 40)
+    minLength(s.repeatNewPassword, 12)
+    maxLength(s.repeatNewPassword, 128)
+
     validate(s.repeatNewPassword, ({ value, valueOf }) => {
       if (value() !== valueOf(s.newPassword)) {
         return { kind: 'notSame' }
@@ -84,7 +87,13 @@ export class ChangePasswordComponent {
   )
 
   private async changePassword (): Promise<void> {
-    const { currentPassword, newPassword, repeatNewPassword } = this.changePasswordModel()
+    const {
+      currentPassword,
+      newPassword,
+      repeatNewPassword
+    } = this.changePasswordModel()
+
+    // Preserve the existing privileged-account password check.
     if (
       localStorage.getItem('email')?.match(/support@.*/) &&
       !newPassword.match(
@@ -95,6 +104,7 @@ export class ChangePasswordComponent {
         'Parola echipei de asistență nu respectă politica corporativă pentru conturile privilegiate! Vă rugăm să schimbați parola în consecință!'
       )
     }
+
     try {
       await firstValueFrom(
         this.userService.changePassword({
@@ -103,6 +113,7 @@ export class ChangePasswordComponent {
           repeat: repeatNewPassword
         })
       )
+
       this.error.set(undefined)
       this.confirmation.set(await this.passwordChangedConfirmation())
       this.resetForm()
@@ -126,7 +137,9 @@ export class ChangePasswordComponent {
 
   private async passwordChangedConfirmation (): Promise<string | undefined> {
     try {
-      return await firstValueFrom(this.translate.get('PASSWORD_SUCCESSFULLY_CHANGED'))
+      return await firstValueFrom(
+        this.translate.get('PASSWORD_SUCCESSFULLY_CHANGED')
+      )
     } catch (translationId) {
       return translationId as string
     }
