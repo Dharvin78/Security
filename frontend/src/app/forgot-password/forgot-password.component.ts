@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
@@ -5,7 +6,7 @@
 
 import { UserService } from '../Services/user.service'
 import { SecurityQuestionService } from '../Services/security-question.service'
-import { disabled, email, form, FormField, FormRoot, minLength, required, validate } from '@angular/forms/signals'
+import { disabled, email, form, FormField, FormRoot, maxLength, minLength, required, validate } from '@angular/forms/signals'
 import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -31,7 +32,24 @@ library.add(faSave, faEdit)
   selector: 'app-forgot-password',
   templateUrl: './forgot-password.component.html',
   styleUrls: ['./forgot-password.component.scss'],
-  imports: [MatCardModule, TranslateModule, MatFormFieldModule, MatLabel, MatInputModule, FormRoot, FormField, MatIconModule, MatSuffix, MatTooltip, MatError, MatHint, MatSlideToggle, PasswordStrengthComponent, PasswordStrengthInfoComponent, MatButtonModule]
+  imports: [
+    MatCardModule,
+    TranslateModule,
+    MatFormFieldModule,
+    MatLabel,
+    MatInputModule,
+    FormRoot,
+    FormField,
+    MatIconModule,
+    MatSuffix,
+    MatTooltip,
+    MatError,
+    MatHint,
+    MatSlideToggle,
+    PasswordStrengthComponent,
+    PasswordStrengthInfoComponent,
+    MatButtonModule
+  ]
 })
 export class ForgotPasswordComponent {
   private readonly securityQuestionService = inject(SecurityQuestionService)
@@ -51,18 +69,37 @@ export class ForgotPasswordComponent {
   public readonly error = signal<string | undefined>(undefined)
   public readonly confirmation = signal<string | undefined>(undefined)
   public readonly timeoutDuration = 1000
+
   private timeout: ReturnType<typeof setTimeout> | undefined
 
   public readonly forgotPasswordForm = form(this.forgotPasswordModel, (s) => {
+    // Email validation
     required(s.email)
     email(s.email)
-    disabled(s.securityQuestion, { when: () => !this.securityQuestion() })
+
+    // Security question validation
+    disabled(s.securityQuestion, {
+      when: () => !this.securityQuestion()
+    })
     required(s.securityQuestion)
-    disabled(s.password, { when: () => !this.securityQuestion() })
+
+    // New password validation: 12-128 characters
+    disabled(s.password, {
+      when: () => !this.securityQuestion()
+    })
     required(s.password)
-    minLength(s.password, 5)
-    disabled(s.repeatPassword, { when: () => !this.securityQuestion() })
+    minLength(s.password, 12)
+    maxLength(s.password, 128)
+
+    // Repeat password validation: 12-128 characters
+    disabled(s.repeatPassword, {
+      when: () => !this.securityQuestion()
+    })
     required(s.repeatPassword)
+    minLength(s.repeatPassword, 12)
+    maxLength(s.repeatPassword, 128)
+
+    // Ensure both passwords match
     validate(s.repeatPassword, ({ value, valueOf }) => {
       if (value() && value() !== valueOf(s.password)) {
         return { kind: 'notSame' }
@@ -84,12 +121,16 @@ export class ForgotPasswordComponent {
 
   findSecurityQuestion () {
     clearTimeout(this.timeout)
+
     this.timeout = setTimeout(() => {
       this.securityQuestion.set(undefined)
+
       const email = this.forgotPasswordModel().email
+
       if (!email) {
         return
       }
+
       this.securityQuestionService.findBy(email).subscribe({
         next: (securityQuestion: SecurityQuestion) => {
           if (securityQuestion) {
@@ -102,27 +143,39 @@ export class ForgotPasswordComponent {
   }
 
   private async changePassword () {
-    const { email, securityQuestion, password, repeatPassword } = this.forgotPasswordModel()
+    const {
+      email,
+      securityQuestion,
+      password,
+      repeatPassword
+    } = this.forgotPasswordModel()
+
     try {
-      await firstValueFrom(this.userService.resetPassword({
-        email,
-        answer: securityQuestion,
-        new: password,
-        repeat: repeatPassword
-      }))
+      await firstValueFrom(
+        this.userService.resetPassword({
+          email,
+          answer: securityQuestion,
+          new: password,
+          repeat: repeatPassword
+        })
+      )
+
       this.error.set(undefined)
       this.confirmation.set(await this.passwordChangedConfirmation())
+
       this.resetForm()
     } catch (err: any) {
       this.error.set(err?.error)
       this.confirmation.set(undefined)
+
       this.resetErrorForm()
     }
   }
 
   resetForm () {
     this.forgotPasswordForm().reset({ ...this.initialModel })
-    // drop the looked-up question so the form returns to its initial state
+
+    // Drop the looked-up question so the form returns to its initial state
     this.securityQuestion.set(undefined)
   }
 
@@ -135,7 +188,9 @@ export class ForgotPasswordComponent {
 
   private async passwordChangedConfirmation (): Promise<string> {
     try {
-      return await firstValueFrom(this.translate.get('PASSWORD_SUCCESSFULLY_CHANGED'))
+      return await firstValueFrom(
+        this.translate.get('PASSWORD_SUCCESSFULLY_CHANGED')
+      )
     } catch (translationId) {
       return translationId as string
     }
