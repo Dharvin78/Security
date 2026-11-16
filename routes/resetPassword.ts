@@ -19,8 +19,17 @@ export function resetPassword () {
     const answer = body.answer
     const newPassword = body.new
     const repeatPassword = body.repeat
-    if (!email || !answer) {
-      next(new Error('Blocked illegal activity by ' + connection.remoteAddress))
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({
+        error: 'Email address is required.'
+      })
+      return
+    }
+
+    if (!answer || typeof answer !== 'string') {
+      res.status(400).json({
+        error: 'Security question answer is required.'
+      })
       return
     }
     if (!newPassword || newPassword === 'undefined') {

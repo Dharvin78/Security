@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
@@ -35,20 +36,38 @@ describe('RegisterComponent', () => {
     let userService: any
     let location: Location
 
+    const validPassword = 'SecurePass123!'
+
+    const setModel = (values: Partial<{
+        email: string
+        password: string
+        repeatPassword: string
+        securityQuestion: number
+        securityAnswer: string
+    }>) => {
+        component.registerModel.update((model) => ({
+            ...model,
+            ...values
+        }))
+    }
+
     beforeEach(async () => {
         securityAnswerService = {
-            save: vi.fn().mockName("SecurityAnswerService.save")
+            save: vi.fn().mockName('SecurityAnswerService.save')
         }
         securityAnswerService.save.mockReturnValue(of({}))
+
         securityQuestionService = {
-            find: vi.fn().mockName("SecurityQuestionService.find")
+            find: vi.fn().mockName('SecurityQuestionService.find')
         }
         securityQuestionService.find.mockReturnValue(of([{}]))
+
         userService = {
-            save: vi.fn().mockName("UserService.save")
+            save: vi.fn().mockName('UserService.save')
         }
         userService.save.mockReturnValue(of({}))
-        TestBed.configureTestingModule({
+
+        await TestBed.configureTestingModule({
             imports: [
                 TranslateModule.forRoot(),
                 MatCardModule,
@@ -60,11 +79,14 @@ describe('RegisterComponent', () => {
                 MatIconModule,
                 MatSnackBarModule,
                 MatTooltipModule,
-                MatIconModule,
                 MatSlideToggleModule,
-                RegisterComponent, LoginComponent],
+                RegisterComponent,
+                LoginComponent
+            ],
             providers: [
-                provideRouter([{ path: 'login', component: LoginComponent }]),
+                provideRouter([
+                    { path: 'login', component: LoginComponent }
+                ]),
                 provideLocationMocks(),
                 { provide: SecurityAnswerService, useValue: securityAnswerService },
                 { provide: SecurityQuestionService, useValue: securityQuestionService },
@@ -72,8 +94,7 @@ describe('RegisterComponent', () => {
                 provideHttpClient(withInterceptorsFromDi()),
                 provideHttpClientTesting()
             ]
-        })
-            .compileComponents()
+        }).compileComponents()
 
         location = TestBed.inject(Location)
     })
@@ -88,95 +109,135 @@ describe('RegisterComponent', () => {
         expect(component).toBeTruthy()
     })
 
-    it('should be compulsory to provid email', () => {
-        component.registerModel.update((model) => ({ ...model, email: '' }))
+    it('should be compulsory to provide email', () => {
+        setModel({ email: '' })
         expect(component.registerForm.email().valid()).toBeFalsy()
     })
 
     it('email field should be of proper format', () => {
-        component.registerModel.update((model) => ({ ...model, email: 'email' }))
+        setModel({ email: 'email' })
         expect(component.registerForm.email().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, email: 'x@x.xx' }))
+
+        setModel({ email: 'x@x.xx' })
         expect(component.registerForm.email().valid()).toBe(true)
     })
 
     it('should be compulsory to provide password', () => {
-        component.registerModel.update((model) => ({ ...model, password: '' }))
+        setModel({ password: '' })
         expect(component.registerForm.password().valid()).toBeFalsy()
     })
 
-    it('password should have at least five characters', () => {
-        component.registerModel.update((model) => ({ ...model, password: 'aaaa' }))
+    it('password should have at least twelve characters', () => {
+        setModel({ password: 'a'.repeat(11) })
         expect(component.registerForm.password().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, password: 'aaaaa' }))
+
+        setModel({ password: 'a'.repeat(12) })
         expect(component.registerForm.password().valid()).toBe(true)
     })
 
-    it('password should not be more than 20 characters', () => {
-        let password = ''
-        for (let i = 0; i < 41; i++) {
-            password += 'a'
-        }
-        component.registerModel.update((model) => ({ ...model, password }))
+    it('password should not exceed 128 characters', () => {
+        setModel({ password: 'a'.repeat(129) })
         expect(component.registerForm.password().valid()).toBeFalsy()
-        password = password.slice(1)
-        component.registerModel.update((model) => ({ ...model, password }))
+
+        setModel({ password: 'a'.repeat(128) })
         expect(component.registerForm.password().valid()).toBe(true)
     })
 
     it('should be compulsory to repeat the password', () => {
-        component.registerModel.update((model) => ({ ...model, password: 'a', repeatPassword: '' }))
+        setModel({
+            password: validPassword,
+            repeatPassword: ''
+        })
         expect(component.registerForm.repeatPassword().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, repeatPassword: 'a' }))
+
+        setModel({ repeatPassword: validPassword })
         expect(component.registerForm.repeatPassword().valid()).toBe(true)
     })
 
     it('password and repeat password should be the same', () => {
-        component.registerModel.update((model) => ({ ...model, password: 'aaaaa', repeatPassword: 'bbbbb' }))
+        setModel({
+            password: validPassword,
+            repeatPassword: 'DifferentPass123!'
+        })
         expect(component.registerForm.repeatPassword().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, repeatPassword: 'aaaaa' }))
+
+        setModel({ repeatPassword: validPassword })
         expect(component.registerForm.repeatPassword().valid()).toBe(true)
     })
 
     it('should be compulsory to select a security question', () => {
-        component.registerModel.update((model) => ({ ...model, securityQuestion: 0 }))
+        setModel({ securityQuestion: 0 })
         expect(component.registerForm.securityQuestion().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, securityQuestion: 1 }))
+
+        setModel({ securityQuestion: 1 })
         expect(component.registerForm.securityQuestion().valid()).toBe(true)
     })
 
     it('should be compulsory to provide a security answer', () => {
-        component.registerModel.update((model) => ({ ...model, securityAnswer: '' }))
+        setModel({ securityAnswer: '' })
         expect(component.registerForm.securityAnswer().valid()).toBeFalsy()
-        component.registerModel.update((model) => ({ ...model, securityAnswer: 'Answer' }))
+
+        setModel({ securityAnswer: 'Answer' })
         expect(component.registerForm.securityAnswer().valid()).toBe(true)
     })
 
     it('redirects to login page after user registration', async () => {
-        userService.save.mockReturnValue(of({ id: 1, question: 'Wat is?' }))
+        userService.save.mockReturnValue(
+            of({ id: 1, question: 'Wat is?' })
+        )
         securityAnswerService.save.mockReturnValue(of({}))
-        component.securityQuestions.set([{ id: 1, question: 'Wat is?' }])
-        component.registerModel.update((model) => ({
-            ...model,
+
+        component.securityQuestions.set([
+            { id: 1, question: 'Wat is?' }
+        ])
+
+        setModel({
             email: 'x@x.xx',
-            password: 'password',
-            repeatPassword: 'password',
+            password: validPassword,
+            repeatPassword: validPassword,
             securityQuestion: 1,
             securityAnswer: 'Answer'
-        }))
-        const user = { email: 'x@x.xx', password: 'password', passwordRepeat: 'password', securityQuestion: { id: 1, question: 'Wat is?' }, securityAnswer: 'Answer' }
-        const securityAnswerObject = { UserId: 1, answer: 'Answer', SecurityQuestionId: 1 }
+        })
+
+        const user = {
+            email: 'x@x.xx',
+            password: validPassword,
+            passwordRepeat: validPassword,
+            securityQuestion: {
+                id: 1,
+                question: 'Wat is?'
+            },
+            securityAnswer: 'Answer'
+        }
+
+        const securityAnswerObject = {
+            UserId: 1,
+            answer: 'Answer',
+            SecurityQuestionId: 1
+        }
+
         await component.save()
         await fixture.whenStable()
-        expect(vi.mocked(userService.save).mock.calls[0][0]).toEqual(user)
-        expect(vi.mocked(securityAnswerService.save).mock.calls[0][0]).toEqual(securityAnswerObject)
+
+        expect(userService.save).toHaveBeenCalledWith(user)
+        expect(securityAnswerService.save).toHaveBeenCalledWith(
+            securityAnswerObject
+        )
         expect(location.path()).toBe('/login')
+
         fixture.destroy()
     })
 
     it('loading secret questions', () => {
-        securityQuestionService.find.mockReturnValue(of([{ id: 1, question: 'WTF?' }, { id: 2, question: 'WAT?' }]))
+        securityQuestionService.find.mockReturnValue(
+            of([
+                { id: 1, question: 'WTF?' },
+                { id: 2, question: 'WAT?' }
+            ])
+        )
+
         component.ngOnInit()
+
         expect(component.securityQuestions().length).toBe(2)
         expect(component.securityQuestions()[0].question).toBe('WTF?')
         expect(component.securityQuestions()[1].question).toBe('WAT?')
@@ -184,35 +245,62 @@ describe('RegisterComponent', () => {
 
     it('should hold nothing when no secret questions exists', () => {
         securityQuestionService.find.mockReturnValue(of(undefined))
+
         component.ngOnInit()
+
         expect(component.securityQuestions()).toEqual([])
     })
 
     it('should log error from backend API on failing to get security questions', () => {
-        securityQuestionService.find.mockReturnValue(throwError('Error'))
-        console.log = vi.fn()
-        component.ngOnInit()
-        expect(console.log).toHaveBeenCalledWith('Error')
+        securityQuestionService.find.mockReturnValue(
+            throwError(() => 'Error')
+        )
+
+        const consoleSpy = vi.spyOn(console, 'log')
+            .mockImplementation(() => {})
+
+        try {
+            component.ngOnInit()
+            expect(consoleSpy).toHaveBeenCalledWith('Error')
+        } finally {
+            consoleSpy.mockRestore()
+        }
     })
 
     it('should log error on saving user', async () => {
-        userService.save.mockReturnValue(throwError('Error'))
-        console.log = vi.fn()
-        component.registerModel.update((model) => ({
-            ...model,
+        userService.save.mockReturnValue(
+            throwError(() => 'Error')
+        )
+
+        const consoleSpy = vi.spyOn(console, 'log')
+            .mockImplementation(() => {})
+
+        component.securityQuestions.set([
+            { id: 1, question: 'Test security question?' }
+        ])
+
+        setModel({
             email: 'x@x.xx',
-            password: 'password',
-            repeatPassword: 'password',
+            password: validPassword,
+            repeatPassword: validPassword,
             securityQuestion: 1,
             securityAnswer: 'Answer'
-        }))
-        await component.save()
-        expect(console.log).toHaveBeenCalledWith('Error')
+        })
+
+        try {
+            await component.save()
+
+            expect(userService.save).toHaveBeenCalled()
+            expect(consoleSpy).toHaveBeenCalledWith('Error')
+        } finally {
+            consoleSpy.mockRestore()
+        }
     })
 
     describe('template rendering', () => {
         it('should render the registration heading and all form input controls', () => {
             const compiled: HTMLElement = fixture.nativeElement
+
             expect(compiled.querySelector('h1')).toBeTruthy()
             expect(compiled.querySelector('input#emailControl')).toBeTruthy()
             expect(compiled.querySelector('input#passwordControl')).toBeTruthy()
@@ -222,7 +310,11 @@ describe('RegisterComponent', () => {
 
         it('should render the register button as disabled while the form is invalid', () => {
             const compiled: HTMLElement = fixture.nativeElement
-            const registerButton = compiled.querySelector('button#registerButton') as HTMLButtonElement
+
+            const registerButton = compiled.querySelector(
+                'button#registerButton'
+            ) as HTMLButtonElement
+
             expect(registerButton).toBeTruthy()
             expect(registerButton.disabled).toBe(true)
         })
@@ -230,13 +322,17 @@ describe('RegisterComponent', () => {
         it('should render the already-a-customer link to the login page', () => {
             const compiled: HTMLElement = fixture.nativeElement
             const link = compiled.querySelector('#alreadyACustomerLink a')
+
             expect(link).toBeTruthy()
         })
 
         it('should show the error message banner as an alert when an error is set', () => {
             component.error.set('Invalid registration data')
             fixture.detectChanges()
-            const errorEl = (fixture.nativeElement as HTMLElement).querySelector('.error')
+
+            const errorEl = (fixture.nativeElement as HTMLElement)
+                .querySelector('.error')
+
             expect(errorEl?.textContent).toContain('Invalid registration data')
             expect(errorEl?.getAttribute('role')).toBe('alert')
         })

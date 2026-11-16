@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
@@ -10,7 +11,6 @@ import { type AfterViewInit, Component, NgZone, type OnDestroy, ViewChild, Chang
 import { MatPaginator } from '@angular/material/paginator'
 import { BehaviorSubject, forkJoin, type Subscription } from 'rxjs'
 import { MatTableDataSource } from '@angular/material/table'
-import { DomSanitizer } from '@angular/platform-browser'
 import { TranslateModule } from '@ngx-translate/core'
 import { SocketIoService } from '../Services/socket-io.service'
 
@@ -31,7 +31,16 @@ library.add(faEye, faCartPlus)
   selector: 'app-search-result',
   templateUrl: './search-result.component.html',
   styleUrls: ['./search-result.component.scss'],
-  imports: [MatCardModule, TranslateModule, MatButtonModule, MatCardTitle, MatCardContent, MatPaginator, AsyncPipe, ProductComponent]
+  imports: [
+    MatCardModule,
+    TranslateModule,
+    MatButtonModule,
+    MatCardTitle,
+    MatCardContent,
+    MatPaginator,
+    AsyncPipe,
+    ProductComponent
+  ]
 })
 export class SearchResultComponent implements OnDestroy, AfterViewInit {
   private readonly deluxeGuard = inject(DeluxeGuard)
@@ -39,7 +48,6 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   private readonly quantityService = inject(QuantityService)
   private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
-  private readonly sanitizer = inject(DomSanitizer)
   private readonly ngZone = inject(NgZone)
   private readonly io = inject(SocketIoService)
   private readonly cdRef = inject(ChangeDetectorRef)
@@ -52,21 +60,29 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   public searchValue?: string
   public resultsLength = 0
   public currentPageSize = 15
-  @ViewChild(MatPaginator, { static: true }) paginator!: MatPaginator
+
+  @ViewChild(MatPaginator, { static: true })
+  paginator!: MatPaginator
+
   private routerSubscription?: Subscription
   private gridDataSourceSubscription?: Subscription
   private resizeObserver?: ResizeObserver
+
   public emptyState = false
 
-  // vuln-code-snippet start restfulXssChallenge
+  // Product descriptions are kept as ordinary strings.
+  // Angular sanitizes HTML when rendering through [innerHTML].
   ngAfterViewInit () {
     const products = this.productService.search('')
     const quantities = this.quantityService.getAll()
+
     forkJoin([quantities, products]).subscribe({
       next: ([quantities, products]) => {
         const dataTable: ProductTableEntry[] = []
+
         this.tableData = products
-        this.trustProductDescription(products) // vuln-code-snippet neutral-line restfulXssChallenge
+        this.trustProductDescription(products)
+
         for (const product of products) {
           dataTable.push({
             name: product.name,
@@ -78,16 +94,20 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
             alternateImages: product.alternateImages
           })
         }
+
         for (const quantity of quantities) {
           const entry = dataTable.find((dataTableEntry) => {
             return dataTableEntry.id === quantity.ProductId
           })
+
           if (entry === undefined) {
             continue
           }
+
           entry.quantity = quantity.quantity
           entry.limitPerUser = quantity.limitPerUser
         }
+
         this.dataSource = new MatTableDataSource<ProductTableEntry>(dataTable)
         this.updatePageSizeOptions()
         this.dataSource.paginator = this.paginator
@@ -95,26 +115,36 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
         this.gridDataSource = this.dataSource.connect()
         this.resultsLength = this.dataSource.data.length
         this.filterTable()
+
         this.routerSubscription = this.router.events.subscribe(() => {
           this.filterTable()
         })
-        const challenge: string = this.route.snapshot.queryParams.challenge // vuln-code-snippet hide-start
-        if (challenge && this.route.snapshot.url.join('').match(/hacking-instructor/)) {
+
+        const challenge: string = this.route.snapshot.queryParams.challenge
+
+        if (
+          challenge &&
+          this.route.snapshot.url.join('').match(/hacking-instructor/)
+        ) {
           this.startHackingInstructor(decodeURIComponent(challenge))
-        } // vuln-code-snippet hide-end
+        }
+
         this.cdRef.detectChanges()
       },
-      error: (err) => { console.log(err) }
+      error: (err) => {
+        console.log(err)
+      }
     })
   }
 
-  trustProductDescription (tableData: any[]) { // vuln-code-snippet neutral-line restfulXssChallenge
-    for (let i = 0; i < tableData.length; i++) { // vuln-code-snippet neutral-line restfulXssChallenge
-      tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description) // vuln-code-snippet vuln-line restfulXssChallenge
-    } // vuln-code-snippet neutral-line restfulXssChallenge
-  } // vuln-code-snippet neutral-line restfulXssChallenge
-
-  // vuln-code-snippet end restfulXssChallenge
+  // SECURITY FIX:
+  // Never mark untrusted product descriptions as trusted HTML.
+  // Angular will sanitize ordinary strings bound to [innerHTML].
+  trustProductDescription (tableData: any[]) {
+    for (let i = 0; i < tableData.length; i++) {
+      tableData[i].description = String(tableData[i].description ?? '')
+    }
+  }
 
   ngOnDestroy () {
     if (this.routerSubscription) {
@@ -134,71 +164,91 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  // vuln-code-snippet start localXssChallenge xssBonusChallenge
+  // Search queries are displayed through Angular text interpolation,
+  // which escapes HTML rather than executing it.
   filterTable () {
     let queryParam: string = this.route.snapshot.queryParams.q
+
     if (queryParam) {
       queryParam = queryParam.trim()
-      this.ngZone.runOutsideAngular(() => { // vuln-code-snippet hide-start
+
+      this.ngZone.runOutsideAngular(() => {
         this.io.socket()?.emit('verifyLocalXssChallenge', queryParam)
-      }) // vuln-code-snippet hide-end
+      })
+
       this.dataSource.filter = queryParam.toLowerCase()
-      this.searchValue = queryParam // vuln-code-snippet vuln-line localXssChallenge xssBonusChallenge
+      this.searchValue = queryParam
+
       if (this.gridDataSourceSubscription) {
         this.gridDataSourceSubscription.unsubscribe()
       }
-      this.gridDataSourceSubscription = this.gridDataSource.subscribe((result: ProductTableEntry[]) => {
-        if (result.length === 0) {
-          this.emptyState = true
-        } else {
-          this.emptyState = false
+
+      this.gridDataSourceSubscription = this.gridDataSource.subscribe(
+        (result: ProductTableEntry[]) => {
+          if (result.length === 0) {
+            this.emptyState = true
+          } else {
+            this.emptyState = false
+          }
         }
-      })
+      )
     } else {
       this.dataSource.filter = ''
       this.searchValue = undefined
       this.emptyState = false
     }
   }
-  // vuln-code-snippet end localXssChallenge xssBonusChallenge
 
   private setupResponsivePageSize () {
     const grid = this.elRef.nativeElement.querySelector('.products-grid')
+
     if (!grid) return
+
     this.resizeObserver = new ResizeObserver(() => {
       this.ngZone.run(() => {
         this.updatePageSize(grid)
       })
     })
+
     this.resizeObserver.observe(grid)
   }
 
   private updatePageSize (grid: Element) {
     const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
     const pageSize = Math.ceil(15 / columns) * columns
+
     if (pageSize !== this.currentPageSize) {
       this.currentPageSize = pageSize
       this.paginator.pageSize = pageSize
       this.updatePageSizeOptions()
+
       this.paginator.page.emit({
         pageIndex: this.paginator.pageIndex,
         pageSize: this.currentPageSize,
         length: this.paginator.length
       })
+
       this.cdRef.detectChanges()
     }
   }
 
   private updatePageSizeOptions () {
     this.pageSizeOptions = []
-    for (let i = 1; i <= Math.ceil(this.dataSource.data.length / this.currentPageSize); i++) {
+
+    for (
+      let i = 1;
+      i <= Math.ceil(this.dataSource.data.length / this.currentPageSize);
+      i++
+    ) {
       this.pageSizeOptions.push(i * this.currentPageSize)
     }
+
     this.paginator.pageSizeOptions = this.pageSizeOptions
   }
 
   startHackingInstructor (challengeName: string) {
     console.log(`Starting instructions for challenge "${challengeName}"`)
+
     import('../../hacking-instructor').then(module => {
       module.startHackingInstructorFor(challengeName)
     })

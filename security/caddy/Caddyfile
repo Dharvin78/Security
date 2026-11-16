@@ -1,0 +1,10 @@
+https://localhost:3443 {
+    tls internal
+
+    header {
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+    }
+
+    reverse_proxy 127.0.0.1:3000
+}

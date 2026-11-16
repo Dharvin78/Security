@@ -11,6 +11,7 @@ import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
 
 let app: Express
+let sequelize: Awaited<ReturnType<typeof createTestApp>>['sequelize']
 let authHeader: { Authorization: string, 'content-type': string }
 let addressId: string
 
@@ -18,6 +19,7 @@ before(
   async () => {
     const result = await createTestApp()
     app = result.app
+    sequelize = result.sequelize
 
     const { token } = await login(app, {
       email: 'jim@juice-sh.op',
@@ -53,6 +55,40 @@ void describe('/api/Addresss', () => {
       country: 'USA'
     })
     assert.equal(res.status, 201)
+  })
+
+  void it('stores sensitive address fields in encrypted form', async () => {
+    const res = await request(app)
+      .post('/api/Addresss')
+      .set(authHeader)
+      .send({
+        fullName: 'Encryption Test',
+        mobileNum: '9800000000',
+        zipCode: 'NX 101',
+        streetAddress: 'Secret Street 123',
+        city: 'NYC',
+        state: 'NY',
+        country: 'USA'
+      })
+
+    assert.equal(res.status, 201)
+
+    const address = await sequelize.models.Address.findByPk(
+      res.body.data.id,
+      { raw: true }
+    )
+
+    assert.ok(address)
+
+    const stored = address as unknown as Record<string, unknown>
+
+    assert.notEqual(stored.fullName, 'Encryption Test')
+    assert.notEqual(stored.mobileNum, '9800000000')
+    assert.notEqual(stored.streetAddress, 'Secret Street 123')
+
+    assert.match(String(stored.fullName), /^enc:v1:/)
+    assert.match(String(stored.mobileNum), /^enc:v1:/)
+    assert.match(String(stored.streetAddress), /^enc:v1:/)
   })
 
   void it('POST new address with invalid pin code', async () => {
@@ -128,11 +164,15 @@ void describe('/api/Addresss/:id', () => {
     assert.equal(res.status, 401)
   })
 
-  void it('GET address by id', async () => {
+  void it('GET address by id returns decrypted sensitive fields', async () => {
     const res = await request(app)
       .get('/api/Addresss/' + addressId)
       .set(authHeader)
+
     assert.equal(res.status, 200)
+    assert.equal(res.body.data.fullName, 'Jim')
+    assert.equal(res.body.data.mobileNum, 9800000000)
+    assert.equal(res.body.data.streetAddress, 'Bakers Street')
   })
 
   void it('GET address by non-existing id returns 400 for authorized user', async () => {

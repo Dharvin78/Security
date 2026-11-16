@@ -1,0 +1,12 @@
+diff --git a/config/default.yml b/config/default.yml
+index 3826eeb5a..98c98cdf5 100644
+--- a/config/default.yml
++++ b/config/default.yml
+@@ -64,6 +64,7 @@ application:
+   googleOauth:
+     clientId: '1005568560502-6hm16lef8oh46hr2d98vf2ohlnj4nfhq.apps.googleusercontent.com'
+     authorizedRedirects:
++      - { uri: 'https://localhost:3443' }
+       - { uri: 'https://demo.owasp-juice.shop' }
+       - { uri: 'https://juice-shop.herokuapp.com' }
+       - { uri: 'https://preview.owasp-juice.shop' }

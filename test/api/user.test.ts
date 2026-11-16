@@ -49,8 +49,11 @@ void describe('/api/Users', () => {
       .set(jsonHeader)
       .send({
         email: 'horst@horstma.nn',
-        password: 'hooooorst'
+        password: 'SecureUser2026!',
+        passwordRepeat: 'SecureUser2026!'
       })
+    console.log('Registration status:', res.status)
+    console.log('Registration response:', JSON.stringify(res.body, null, 2))
     assert.equal(res.status, 201)
     assert.ok(res.headers['content-type']?.includes('application/json'))
     assert.equal(typeof res.body.data.id, 'number')
@@ -59,38 +62,37 @@ void describe('/api/Users', () => {
     assert.equal(res.body.data.password, undefined)
   })
 
-  void it('POST new admin', async () => {
+  void it('POST unauthorized admin registration is rejected', async () => {
     const res = await request(app)
       .post('/api/Users')
       .set(jsonHeader)
       .send({
         email: 'horst2@horstma.nn',
-        password: 'hooooorst',
+        password: 'SecureAdmin2026!',
+        passwordRepeat: 'SecureAdmin2026!',
         role: 'admin'
       })
-    assert.equal(res.status, 201)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(typeof res.body.data.id, 'number')
-    assert.equal(typeof res.body.data.createdAt, 'string')
-    assert.equal(typeof res.body.data.updatedAt, 'string')
-    assert.equal(res.body.data.password, undefined)
-    assert.equal(res.body.data.role, 'admin')
+
+    assert.equal(res.status, 403)
+    assert.equal(
+      res.body.error,
+      'You are not authorized to register with this role.'
+    )
   })
 
-  void it('POST new blank user', async () => {
+  void it('POST new blank user is rejected', async () => {
     const res = await request(app)
       .post('/api/Users')
       .set(jsonHeader)
       .send({
         email: ' ',
-        password: ' '
+        password: ' ',
+        passwordRepeat: ' '
       })
-    assert.equal(res.status, 201)
+
+    assert.equal(res.status, 400)
     assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(typeof res.body.data.id, 'number')
-    assert.equal(typeof res.body.data.createdAt, 'string')
-    assert.equal(typeof res.body.data.updatedAt, 'string')
-    assert.equal(res.body.data.password, undefined)
+    assert.equal(res.body.error, 'Invalid email or password.')
   })
 
   void it('POST same blank user in database', async () => {
@@ -118,7 +120,8 @@ void describe('/api/Users', () => {
       .set(jsonHeader)
       .send({
         email: ' test@gmail.com',
-        password: ' test'
+        password: 'SecureSpace2026!',
+        passwordRepeat: 'SecureSpace2026!'
       })
     assert.equal(res.status, 201)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -127,56 +130,58 @@ void describe('/api/Users', () => {
     assert.equal(res.body.data.password, undefined)
   })
 
-  void it('POST new deluxe user', async () => {
+  void it('POST unauthorized deluxe registration is rejected', async () => {
     const res = await request(app)
       .post('/api/Users')
       .set(jsonHeader)
       .send({
         email: 'horst3@horstma.nn',
-        password: 'hooooorst',
+        password: 'SecureDeluxe2026!',
+        passwordRepeat: 'SecureDeluxe2026!',
         role: 'deluxe'
       })
-    assert.equal(res.status, 201)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(typeof res.body.data.id, 'number')
-    assert.equal(typeof res.body.data.createdAt, 'string')
-    assert.equal(typeof res.body.data.updatedAt, 'string')
-    assert.equal(res.body.data.password, undefined)
-    assert.equal(res.body.data.role, 'deluxe')
+
+    assert.equal(res.status, 403)
+    assert.equal(
+      res.body.error,
+      'You are not authorized to register with this role.'
+    )
   })
 
-  void it('POST new accounting user', async () => {
+  void it('POST unauthorized accounting registration is rejected', async () => {
     const res = await request(app)
       .post('/api/Users')
       .set(jsonHeader)
       .send({
         email: 'horst4@horstma.nn',
-        password: 'hooooorst',
+        password: 'SecureAccounting2026!',
+        passwordRepeat: 'SecureAccounting2026!',
         role: 'accounting'
       })
-    assert.equal(res.status, 201)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(typeof res.body.data.id, 'number')
-    assert.equal(typeof res.body.data.createdAt, 'string')
-    assert.equal(typeof res.body.data.updatedAt, 'string')
-    assert.equal(res.body.data.password, undefined)
-    assert.equal(res.body.data.role, 'accounting')
+
+    assert.equal(res.status, 403)
+    assert.equal(
+      res.body.error,
+      'You are not authorized to register with this role.'
+    )
   })
 
-  void it('POST user not belonging to customer, deluxe, accounting, admin is forbidden', async () => {
+  void it('POST invalid role registration is rejected', async () => {
     const res = await request(app)
       .post('/api/Users')
       .set(jsonHeader)
       .send({
         email: 'horst5@horstma.nn',
-        password: 'hooooorst',
+        password: 'SecureRole2026!',
+        passwordRepeat: 'SecureRole2026!',
         role: 'accountinguser'
       })
-    assert.equal(res.status, 400)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.message, 'Validation error: Validation isIn on role failed')
-    assert.equal(res.body.errors[0].field, 'role')
-    assert.equal(res.body.errors[0].message, 'Validation isIn on role failed')
+
+    assert.equal(res.status, 403)
+    assert.equal(
+      res.body.error,
+      'You are not authorized to register with this role.'
+    )
   })
 
   if (utils.isChallengeEnabled(challenges.persistedXssUserChallenge)) {
@@ -186,11 +191,11 @@ void describe('/api/Users', () => {
         .set(jsonHeader)
         .send({
           email: '<iframe src="javascript:alert(`xss`)">',
-          password: 'does.not.matter'
+          password: 'SecureXss2026!',
+          passwordRepeat: 'SecureXss2026!'
         })
-      assert.equal(res.status, 201)
+      assert.equal(res.status, 400)
       assert.ok(res.headers['content-type']?.includes('application/json'))
-      assert.equal(res.body.data.email, '<iframe src="javascript:alert(`xss`)">')
     })
   }
 })
@@ -312,7 +317,7 @@ void describe('/rest/user/whoami', () => {
     assert.equal(typeof res.body.user.email, 'string')
   })
 
-  void it('GET who-am-i with fields parameter can be tricked into returning password', async () => {
+  void it('GET who-am-i prevents password hash exposure through fields parameter', async () => {
     const { token } = await login(app, {
       email: 'bjoern.kimminich@gmail.com',
       password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
@@ -324,6 +329,6 @@ void describe('/rest/user/whoami', () => {
     assert.ok(res.headers['content-type']?.includes('application/json'))
     assert.equal(typeof res.body.user.id, 'number')
     assert.equal(typeof res.body.user.email, 'string')
-    assert.equal(typeof res.body.user.password, 'string')
+    assert.equal(res.body.user.password, undefined)
   })
 })

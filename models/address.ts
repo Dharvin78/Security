@@ -11,10 +11,11 @@ import {
   DataTypes,
   type Sequelize
 } from 'sequelize'
+import { encryptData, decryptData } from '../lib/dataEncryption'
 
 class Address extends Model<
-InferAttributes<Address>,
-InferCreationAttributes<Address>
+  InferAttributes<Address>,
+  InferCreationAttributes<Address>
 > {
   declare UserId: number
   declare id: CreationOptional<number>
@@ -39,14 +40,40 @@ const AddressModelInit = (sequelize: Sequelize) => {
         autoIncrement: true
       },
       fullName: {
-        type: DataTypes.STRING
+        type: DataTypes.TEXT,
+        set (value: string) {
+          this.setDataValue('fullName', encryptData(value))
+        },
+        get () {
+          const stored = this.getDataValue('fullName')
+          return stored == null ? stored : decryptData(stored)
+        }
       },
       mobileNum: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.TEXT,
         validate: {
-          isInt: true,
-          min: 1000000,
-          max: 9999999999
+          validMobileNumber (this: Address) {
+            const stored = this.getDataValue('mobileNum')
+            const value = stored == null
+              ? NaN
+              : Number(decryptData(String(stored)))
+
+            if (!Number.isInteger(value) ||
+                value < 1000000 ||
+                value > 9999999999) {
+              throw new Error('Invalid mobile number')
+            }
+          }
+        },
+        set (value: number) {
+          this.setDataValue(
+            'mobileNum',
+            encryptData(String(value)) as unknown as number
+          )
+        },
+        get () {
+          const stored = this.getDataValue('mobileNum')
+          return stored == null ? stored : Number(decryptData(String(stored)))
         }
       },
       zipCode: {
@@ -56,9 +83,24 @@ const AddressModelInit = (sequelize: Sequelize) => {
         }
       },
       streetAddress: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         validate: {
-          len: [1, 160]
+          validStreetAddress (this: Address) {
+            const value = this.streetAddress
+
+            if (typeof value !== 'string' ||
+                value.length < 1 ||
+                value.length > 160) {
+              throw new Error('Street address must contain 1-160 characters')
+            }
+          }
+        },
+        set (value: string) {
+          this.setDataValue('streetAddress', encryptData(value))
+        },
+        get () {
+          const stored = this.getDataValue('streetAddress')
+          return stored == null ? stored : decryptData(stored)
         }
       },
       city: DataTypes.STRING,

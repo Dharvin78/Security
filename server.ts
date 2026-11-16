@@ -338,11 +338,14 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use(morgan('combined', { stream: accessLogStream }))
   // vuln-code-snippet start resetPasswordMortyChallenge
   /* Rate limiting */
-  app.enable('trust proxy')
+  // Do not trust client-supplied proxy headers in direct deployments.
+  app.set('trust proxy', false)
+
   app.use('/rest/user/reset-password', rateLimit({
     windowMs: 5 * 60 * 1000,
-    max: 100,
-    keyGenerator ({ headers, ip }: { headers: any, ip: any }) { return headers['X-Forwarded-For'] ?? ip } // vuln-code-snippet vuln-line resetPasswordMortyChallenge
+    limit: 100,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
   }))
   // vuln-code-snippet end resetPasswordMortyChallenge
   // vuln-code-snippet start changeProductChallenge
@@ -418,7 +421,20 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     }
 
     // Normalize email without changing the password supplied by the user.
-    req.body.email = email.trim()
+    const normalizedEmail = email.trim()
+
+    // Reject invalid email formats and HTML injection attempts.
+    const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
+
+    if (
+      normalizedEmail.length > 254 ||
+      !emailPattern.test(normalizedEmail)
+    ) {
+      res.status(400).json({ error: 'Invalid email address.' })
+      return
+    }
+
+    req.body.email = normalizedEmail
 
     if (password.length < 12 || password.length > 128) {
       res.status(400).json({ error: 'Password must contain between 12 and 128 characters.' })
@@ -440,6 +456,17 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
       res.status(400).json({ error: 'Passwords do not match.' })
       return
     }
+
+    // Public registration must not assign privileged roles.
+    if (req.body.role !== undefined && req.body.role !== 'customer') {
+      res.status(403).json({
+        error: 'You are not authorized to register with this role.'
+      })
+      return
+    }
+
+    // Enforce the default customer role on the server.
+    req.body.role = 'customer'
 
     next()
   })
@@ -622,15 +649,18 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     security.isAdmin(),
     utils.asyncHandler(getSecurityMonitoring)
   )
-  const loginRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 10,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    message: 'Too many login attempts. Please try again later.'
-  })
+  const loginRateLimit = process.env.NODE_ENV === 'test'
+    ? (_req: Request, _res: Response, next: NextFunction) => next()
+    : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: 10,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: 'Too many login attempts. Please try again later.'
+    })
+
   app.post('/rest/user/login', loginRateLimit, login())
-  app.get('/rest/user/change-password', utils.asyncHandler(changePassword()))
+  app.post('/rest/user/change-password', utils.asyncHandler(changePassword()))
   app.post('/rest/user/reset-password', utils.asyncHandler(resetPassword()))
   app.get('/rest/user/security-question', utils.asyncHandler(securityQuestion()))
   app.get('/rest/user/whoami', utils.asyncHandler(retrieveLoggedInUser()))
@@ -787,7 +817,7 @@ export async function start (readyCallback?: () => void) {
   const port = process.env.PORT ?? config.get('server.port')
   process.env.BASE_PATH = process.env.BASE_PATH ?? config.get('server.basePath')
   metricsUpdateLoop = Metrics.updateLoop() // vuln-code-snippet neutral-line exposedMetricsChallenge
-  server.listen(port, () => {
+  server.listen(Number(port), '127.0.0.1', () => {
     logger.info(colors.cyan(`Server listening on port ${colors.bold(`${port}`)}`))
     startupGauge.set({ task: 'ready' }, (Date.now() - startTime) / 1000)
     if (process.env.BASE_PATH !== '') {

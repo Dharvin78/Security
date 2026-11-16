@@ -59,7 +59,7 @@ export const retrieveChallengesWithCodeSnippet = async () => {
 }
 
 export const getVerdict = (vulnLines: number[], neutralLines: number[], selectedLines: number[]) => {
-  if (selectedLines === undefined) return false
+  if (!Array.isArray(selectedLines) || selectedLines.length === 0 || vulnLines.length === 0) return false
   if (vulnLines.length > selectedLines.length) return false
   if (!vulnLines.every(e => selectedLines.includes(e))) return false
   const okLines = [...vulnLines, ...neutralLines]
@@ -90,7 +90,9 @@ export const checkVulnLines = () => async (req: Request<Record<string, unknown>,
     const codingChallengeInfos = yaml.load(await fs.readFile('./data/static/codefixes/' + key + '.info.yml', { encoding: 'utf8' }))
     if (codingChallengeInfos?.hints) {
       if (accuracy.getFindItAttempts(key) > codingChallengeInfos.hints.length) {
-        if (vulnLines.length === 1) {
+        if (vulnLines.length === 0) {
+          hint = res.__('This coding challenge is unavailable because no vulnerable lines are defined.')
+        } else if (vulnLines.length === 1) {
           hint = res.__('Line {{vulnLine}} is responsible for this vulnerability or security flaw. Select it and submit to proceed.', { vulnLine: vulnLines[0].toString() })
         } else {
           hint = res.__('Lines {{vulnLines}} are responsible for this vulnerability or security flaw. Select them and submit to proceed.', { vulnLines: vulnLines.toString() })

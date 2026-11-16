@@ -76,14 +76,25 @@ void describe('/api/Wallets', () => {
   })
   void it('GET wallet balance for user without a wallet returns 404', async () => {
     const email = `newuser${Date.now()}@juice-sh.op`
+    const password = 'WalletSecure2026!'
+
     const userRes = await request(app)
       .post('/api/Users')
-      .send({ email, password: 'password', passwordRepeat: 'password', securityQuestion: { id: 1 }, securityAnswer: 'answer' })
+      .send({
+        email,
+        password,
+        passwordRepeat: password,
+        securityQuestion: { id: 1 },
+        securityAnswer: 'answer'
+      })
+      .expect(201)
+
     const userId = userRes.body.data.id
 
     const loginRes = await request(app)
       .post('/rest/user/login')
-      .send({ email, password: 'password' })
+      .send({ email, password })
+      .expect(200)
 
     await WalletModel.destroy({ where: { UserId: userId } })
 

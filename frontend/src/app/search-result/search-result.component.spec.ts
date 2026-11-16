@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
  */
@@ -162,11 +162,25 @@ describe('SearchResultComponent', () => {
         expect(component).toBeTruthy()
     })
 
-    it('should render product descriptions as trusted HTML', () => {
-        productService.search.mockReturnValue(of([{ description: '<script>alert("XSS")</script>' }]))
+    it('should preserve product descriptions as untrusted strings', () => {
+        const maliciousDescription = '<img src="x" onerror="alert(1)">'
+
+        productService.search.mockReturnValue(of([{
+            id: 1,
+            name: 'Test Product',
+            price: 10,
+            image: 'test.png',
+            description: maliciousDescription
+        }]))
+
+        sanitizer.bypassSecurityTrustHtml.mockClear()
+
         component.ngAfterViewInit()
         fixture.detectChanges()
-        expect(sanitizer.bypassSecurityTrustHtml).toHaveBeenCalledWith('<script>alert("XSS")</script>')
+
+        expect(component.tableData[0].description).toBe(maliciousDescription)
+        expect(component.dataSource.data[0].description).toBe(maliciousDescription)
+        expect(sanitizer.bypassSecurityTrustHtml).not.toHaveBeenCalled()
     })
 
     it('should hold no products when product search API call fails', () => {
@@ -215,10 +229,29 @@ describe('SearchResultComponent', () => {
         expect(component.dataSource.filter).toEqual('product search')
     })
 
-    it('should pass the search query as trusted HTML', () => {
-        activatedRoute.setQueryParameter('<script>scripttag</script>')
+    it('should handle search queries without bypassing HTML sanitization', () => {
+        const maliciousQuery = '<script>scripttag</script>'
+
+        activatedRoute.setQueryParameter(maliciousQuery)
+
+        sanitizer.bypassSecurityTrustHtml.mockClear()
+
         component.filterTable()
-        expect(sanitizer.bypassSecurityTrustHtml).toHaveBeenCalledWith('<script>scripttag</script>')
+
+        expect(component.searchValue).toBe(maliciousQuery)
+        expect(component.dataSource.filter).toBe(
+            maliciousQuery.toLowerCase()
+        )
+        expect(sanitizer.bypassSecurityTrustHtml).not.toHaveBeenCalled()
+
+        fixture.detectChanges()
+
+        const searchValueElement = (
+            fixture.nativeElement as HTMLElement
+        ).querySelector('#searchValue')
+
+        expect(searchValueElement).toBeTruthy()
+        expect(searchValueElement?.querySelector('script')).toBeNull()
     })
 
     describe('template rendering', () => {

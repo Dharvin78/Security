@@ -86,18 +86,37 @@ describe('UserService', () => {
         httpMock.verify()
     })
 
-    it('should change user password directly via the rest api', () => {
+    it('should change user password securely via POST', () => {
         const service = TestBed.inject(UserService)
         const httpMock = TestBed.inject(HttpTestingController)
 
         let res: any
-        service.changePassword({ current: 'foo', new: 'bar', repeat: 'bar' }).subscribe((data) => (res = data))
+        service.changePassword({
+            current: 'foo',
+            new: 'bar',
+            repeat: 'bar'
+        }).subscribe((data) => (res = data))
 
-        const req = httpMock.expectOne('http://localhost:3000/rest/user/change-password?current=foo&new=bar&repeat=bar')
-        req.flush({ user: 'apiResponse' })
+        const req = httpMock.expectOne(
+            'http://localhost:3000/rest/user/change-password'
+        )
 
-        expect(req.request.method).toBe('GET')
-        expect(res).toBe('apiResponse')
+        expect(req.request.method).toBe('POST')
+        expect(req.request.body).toEqual({
+           current: 'foo',
+           new: 'bar',
+           repeat: 'bar'
+        })
+
+        expect(req.request.url).not.toContain('foo')
+        expect(req.request.url).not.toContain('bar')
+
+        req.flush({ message: 'Password changed successfully' })
+
+        expect(res).toEqual({
+           message: 'Password changed successfully'
+        })
+
         httpMock.verify()
     })
 

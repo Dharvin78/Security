@@ -25,10 +25,20 @@ export function retrieveLoggedInUser () {
         let baseUser: any = {}
 
         if (requestedFields.length > 0) {
-          // When fields are specified, return only those fields
+          // Restrict responses to approved user profile fields.
+          const allowedFields = new Set([
+            'id',
+            'email',
+            'lastLoginIp',
+            'profileImage'
+          ])
+
           for (const field of requestedFields) {
-            if (user?.data[field as keyof typeof user.data] !== undefined) {
-              baseUser[field] = user?.data[field as keyof typeof user.data]
+            if (
+              allowedFields.has(field) &&
+              user?.data[field as keyof typeof user.data] !== undefined
+            ) {
+              baseUser[field] = user.data[field as keyof typeof user.data]
             }
           }
         } else {

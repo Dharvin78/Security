@@ -19,87 +19,101 @@ before(async () => {
 }, { timeout: 60000 })
 
 void describe('/rest/user/change-password', () => {
-  void it('GET password change for newly created user with recognized token as Authorization header', async () => {
+  void it('POST password change for newly created user with valid authorization and current password', async () => {
     await request(app)
       .post('/api/Users')
       .set({ 'content-type': 'application/json' })
       .send({
         email: 'kuni@be.rt',
-        password: 'kunigunde'
+        password: 'KunigundeSecure2026!',
+        passwordRepeat: 'KunigundeSecure2026!'
       })
       .expect(201)
 
-    const { token } = await login(app, { email: 'kuni@be.rt', password: 'kunigunde' })
+    const { token } = await login(app, { email: 'kuni@be.rt', password: 'KunigundeSecure2026!' })
 
     const res = await request(app)
-      .get('/rest/user/change-password?current=kunigunde&new=foo&repeat=foo')
+      .post('/rest/user/change-password')
       .set({ Authorization: 'Bearer ' + token })
+      .send({ current: 'KunigundeSecure2026!', new: 'NewKunigunde2026!', repeat: 'NewKunigunde2026!' })
 
     assert.equal(res.status, 200)
+    assert.equal(res.body.message, 'Password changed successfully')
+
+    const newLogin = await login(app, { email: 'kuni@be.rt', password: 'NewKunigunde2026!' })
+    assert.equal(typeof newLogin.token, 'string')
   })
 
-  void it('GET password change with passing wrong current password', async () => {
+  void it('POST password change with wrong current password is rejected', async () => {
     const { token } = await login(app, {
       email: 'bjoern@' + config.get<string>('application.domain'),
       password: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase'
     })
 
     const res = await request(app)
-      .get('/rest/user/change-password?current=definetely_wrong&new=blubb&repeat=blubb')
+      .post('/rest/user/change-password')
       .set({ Authorization: 'Bearer ' + token })
+      .send({ current: 'definitely_wrong', new: 'StrongNewPassword2026!', repeat: 'StrongNewPassword2026!' })
 
     assert.equal(res.status, 401)
     assert.ok(res.text.includes('Current password is not correct'))
   })
 
-  void it('GET password change without passing any passwords', async () => {
+  void it('POST password change without new password is rejected', async () => {
     const res = await request(app)
-      .get('/rest/user/change-password')
+      .post('/rest/user/change-password')
+      .send({})
 
     assert.equal(res.status, 401)
     assert.ok(res.text.includes('Password cannot be empty'))
   })
 
-  void it('GET password change with passing wrong repeated password', async () => {
+  void it('POST password change with mismatching repeated password is rejected', async () => {
     const res = await request(app)
-      .get('/rest/user/change-password?new=foo&repeat=bar')
+      .post('/rest/user/change-password')
+      .send({ new: 'StrongNewPassword2026!', repeat: 'DifferentPassword2026!' })
 
     assert.equal(res.status, 401)
     assert.ok(res.text.includes('New and repeated password do not match'))
   })
 
-  void it('GET password change without passing an authorization token', async () => {
+  void it('POST password change without authorization cannot succeed', async () => {
     const res = await request(app)
-      .get('/rest/user/change-password?new=foo&repeat=foo')
+      .post('/rest/user/change-password')
+      .send({ current: 'AnyCurrentPassword2026!', new: 'StrongNewPassword2026!', repeat: 'StrongNewPassword2026!' })
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 401)
   })
 
-  void it('GET password change with passing unrecognized authorization token', async () => {
+  void it('POST password change with unrecognized authorization token cannot succeed', async () => {
     const res = await request(app)
-      .get('/rest/user/change-password?new=foo&repeat=foo')
+      .post('/rest/user/change-password')
       .set({ Authorization: 'Bearer unknown' })
+      .send({ current: 'AnyCurrentPassword2026!', new: 'StrongNewPassword2026!', repeat: 'StrongNewPassword2026!' })
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 401)
   })
 
-  void it('GET password change for Bender without current password using GET request', async () => {
+  void it('POST password change for Bender without current password is rejected', async () => {
     const { token } = await login(app, {
       email: 'bender@' + config.get<string>('application.domain'),
       password: 'OhG0dPlease1nsertLiquor!'
     })
 
     const res = await request(app)
-      .get('/rest/user/change-password?new=slurmCl4ssic&repeat=slurmCl4ssic')
+      .post('/rest/user/change-password')
       .set({ Authorization: 'Bearer ' + token })
+      .send({ new: 'slurmCl4ssic2026!', repeat: 'slurmCl4ssic2026!' })
 
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 401)
+    assert.ok(res.text.includes('Current password is not correct'))
+  })
+
+  void it('GET password change is not permitted', async () => {
+    const res = await request(app)
+      .get('/rest/user/change-password?current=anything&new=anything&repeat=anything')
+
+    assert.notEqual(res.status, 200)
   })
 })
 
@@ -132,7 +146,7 @@ void describe('/rest/user/reset-password', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('POST password reset for Bjoern\u00b4s internal account with correct answer to his security question', async () => {
+  void it('POST password reset for Bjoern´s internal account with correct answer to his security question', async () => {
     const res = await request(app)
       .post('/rest/user/reset-password')
       .set({ 'content-type': 'application/json' })
@@ -146,7 +160,7 @@ void describe('/rest/user/reset-password', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('POST password reset for Bjoern\u00b4s OWASP account with correct answer to his security question', async () => {
+  void it('POST password reset for Bjoern´s OWASP account with correct answer to his security question', async () => {
     const res = await request(app)
       .post('/rest/user/reset-password')
       .set({ 'content-type': 'application/json' })
@@ -193,10 +207,8 @@ void describe('/rest/user/reset-password', () => {
     const res = await request(app)
       .post('/rest/user/reset-password')
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error, 'Email address is required.')
   })
 
   void it('POST password reset without new password throws a 401 error', async () => {
@@ -238,10 +250,8 @@ void describe('/rest/user/reset-password', () => {
         repeat: 'abcdef'
       })
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error, 'Email address is required.')
   })
 
   void it('POST password reset with no answer to the security question throws a 412 error', async () => {
@@ -254,9 +264,25 @@ void describe('/rest/user/reset-password', () => {
         repeat: 'abcdef'
       })
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error, 'Security question answer is required.')
+  })
+
+  void it('POST password reset rate limit cannot be bypassed using X-Forwarded-For', async () => {
+    let lastStatus = 0
+
+    for (let i = 0; i < 101; i++) {
+      const res = await request(app)
+        .post('/rest/user/reset-password')
+        .set({
+          'content-type': 'application/json',
+          'X-Forwarded-For': `192.0.2.${(i % 250) + 1}`
+        })
+        .send({})
+
+      lastStatus = res.status
+    }
+
+    assert.equal(lastStatus, 429)
   })
 })

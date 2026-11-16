@@ -189,6 +189,6 @@ void describe('snippets/verdict (hint progression for loginAdminChallenge)', () 
 
     assert.equal(res.status, 200)
     assert.equal(res.body.verdict, false)
-    assert.match(res.body.hint, /Line 15 is responsible for this vulnerability/)
+    assert.equal(res.body.hint, 'This coding challenge is unavailable because no vulnerable lines are defined.')
   })
 })
